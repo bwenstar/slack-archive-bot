@@ -189,7 +189,7 @@ def handle_query(event):
                 ) for i in res if can_query_channel(i[3], event['user'])]
             ), event['channel'])
         else:
-            send_message('No results found', event['channel'])
+            None
     except ValueError as e:
         print(traceback.format_exc())
         send_message(str(e), event['channel'])
