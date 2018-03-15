@@ -3,6 +3,7 @@ import os
 import sqlite3
 import time
 import traceback
+import re
 
 from slackclient import SlackClient
 from websocket import WebSocketConnectionClosedException
@@ -30,6 +31,8 @@ ENV = {
     'id_channel': {},
     'channel_info': {}
 }
+
+LOG_DIR = "./logs/"
 
 # Uses slack API to get most recent user list
 # Necessary for User ID correlation
@@ -208,11 +211,22 @@ def handle_message(event):
     elif 'user' not in event:
         print("No valid user. Previous event not saved")
     else: # Otherwise save the message to the archive.
+        userid_to_string(event['text'])
+        with open(LOG_DIR+get_channel_name(event['channel']), "a") as file:
+            file.write("[{}] {} : {}\n".format(convert_timestamp(event['ts']), get_user_name(event['user']), userid_to_string(event['text'])))
         cursor.executemany('INSERT INTO messages VALUES(?, ?, ?, ?)',
             [(event['text'], event['user'], event['channel'], event['ts'])]
         )
         conn.commit()
         print("--------------------------")
+
+def userid_to_string(txtmessage):
+    userlist = re.findall(r'\B@\w+', txtmessage)
+    for userid in userlist:
+        conv_user = ENV['id_user'].get(userid.strip('@'))
+        if conv_user is not None:
+            txtmessage = str.replace(txtmessage, userid, conv_user)
+    return(txtmessage)
 
 # Loop
 if sc.rtm_connect():
